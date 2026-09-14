@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plush Doll Top-Down Crawler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #030304;
+      font-family: 'Outfit', sans-serif;
+      color: #f1f5f9;
+    }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .hud-panel {
+      position: absolute;
+      pointer-events: auto;
+      background: rgba(14, 14, 18, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      padding: 10px 18px;
+      color: #94a3b8;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    .hud-top {
+      top: 18px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hud-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hud-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fcd34d;
+      box-shadow: 0 0 10px #fcd34d;
+      animation: pulse 2.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+    .hud-bottom {
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px 20px;
+      max-width: 92vw;
+      text-align: center;
+    }
+    .key-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 400;
+      font-size: 12px;
+    }
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+    }
+    .action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.18s ease;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+    .action-btn:active {
+      transform: translateY(1px);
+    }
+    .action-btn:disabled, .action-btn.disabled {
+      opacity: 0.42;
+      cursor: not-allowed !important;
+      pointer-events: none;
+      filter: grayscale(0.5);
+    }
+    .hud-slider-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .hud-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 74px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.22);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    .hud-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #fcd34d;
+      box-shadow: 0 0 7px rgba(252, 211, 77, 0.85);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .hud-range::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+    .hud-range::-moz-range-thumb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #fcd34d;
+      border: none;
+      box-shadow: 0 0 7px rgba(252, 211, 77, 0.85);
+      cursor: pointer;
+    }
+    .hud-slider-val {
+      min-width: 28px;
+      font-weight: 600;
+      color: #fcd34d;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .mobile-controls {
+      display: none;
+      position: absolute;
+      bottom: 82px;
+      width: 100%;
+      padding: 0 20px;
+      pointer-events: none;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 15;
+    }
+    @media (max-width: 768px) {
+      .mobile-controls {
+        display: flex;
+      }
+      .hud-top {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        justify-content: space-between;
+      }
+      .hud-bottom {
+        bottom: 12px;
+        padding: 8px 12px;
+        font-size: 11px;
+        gap: 6px 12px;
+      }
+    }
+    .d-pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 46px);
+      grid-template-rows: repeat(2, 46px);
+      gap: 6px;
+      pointer-events: auto;
+    }
+    .d-pad-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: rgba(26, 26, 34, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      touch-action: manipulation;
+    }
+    .d-pad-btn:active {
+      background: rgba(255, 255, 255, 0.28);
+    }
+    body.ui-hidden .hud-top {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(-8px);
+    }
+    body.ui-hidden .hud-bottom {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translate(-50%, 8px);
+    }
+    body.ui-hidden .mobile-controls {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(8px);
+    }
+    #btn-show-ui {
+      display: none;
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      z-index: 99;
+      background: rgba(14, 14, 18, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    body.ui-hidden #btn-show-ui {
+      display: block;
+      opacity: 0.55;
+    }
+    body.ui-hidden #btn-show-ui:hover {
+      opacity: 1;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container">
+    <canvas id="world"></canvas>
+  </div>
+
+  <button id="btn-show-ui" title="Restore HUD (Press H)">Show UI [H]</button>
+
+  <div class="hud-panel hud-top">
+    <div class="hud-title"><span class="hud-dot"></span>MilkFish Centipede Crawler</div>
+    <button class="action-btn" id="btn-sound" title="Toggle crawling sounds">Audio: On</button>
+    <button class="action-btn" id="btn-bg" title="Switch environment background (Press B)">BG: Plain Black</button>
+    <div style="display:inline-flex; align-items:center; gap:4px;">
+      <button class="action-btn" id="btn-zoom-out" style="padding:6px 9px;" title="Zoom Out (−)">−</button>
+      <button class="action-btn" id="btn-zoom-reset" title="Reset Zoom (Press 0)">Zoom: 100%</button>
+      <button class="action-btn" id="btn-zoom-in" style="padding:6px 9px;" title="Zoom In (+)">+</button>
+    </div>
+    <div class="hud-slider-group" title="Adjust movement and crawling speed">
+      <span>Speed:</span>
+      <input type="range" id="speed-slider" class="hud-range" min="0.2" max="3.0" step="0.1" value="1.0">
+      <span id="speed-value" class="hud-slider-val">1.0x</span>
+    </div>
+    <button class="action-btn" id="btn-pose" title="Trigger classic splayed frog pose">Pose: Frog [Space]</button>
+    <button class="action-btn" id="btn-poop" title="Poop an attached clone to butt">Poop Clone [P]</button>
+    <button class="action-btn" id="btn-sing" title="Sing eerie choir with different pitches">Sing [V]</button>
+    <span class="action-btn" id="hud-segments" style="pointer-events:none; opacity:0.9; color:#fcd34d; border-color:rgba(252,211,77,0.3);">Segments: 1</span>
+    <button class="action-btn" id="btn-hide-ui" title="Hide user interface (Press H)">Hide UI [H]</button>
+    <button class="action-btn" id="btn-reset" title="Reset centipede">Reset [R]</button>
+  </div>
+
+  <div class="hud-panel hud-bottom">
+    <div class="key-hint"><span class="kbd">▲</span><span class="kbd">▼</span> Crawl Forward / Back</div>
+    <div class="key-hint"><span class="kbd">◀</span><span class="kbd">▶</span> Turn & Steer</div>
+    <div class="key-hint"><span class="kbd">Scroll</span> / <span class="kbd">+</span><span class="kbd">−</span> Zoom</div>
+    <div class="key-hint"><span class="kbd">Shift</span> Scurry Sprint</div>
+    <div class="key-hint"><span class="kbd">Space</span> Frog Stretch</div>
+    <div class="key-hint"><span class="kbd">P</span> Poop Clone</div>
+    <div class="key-hint"><span class="kbd">V</span> Sing Choir</div>
+    <div class="key-hint"><span class="kbd">B</span> Cycle BG</div>
+    <div class="key-hint"><span class="kbd">H</span> Hide UI</div>
+    <div class="key-hint"><span class="kbd">Drag Limbs/Tail</span> Tug & Move Ragdoll</div>
+  </div>
+
+  <div class="mobile-controls">
+    <div class="d-pad-grid">
+      <div></div>
+      <button class="d-pad-btn" id="m-up">▲</button>
+      <div></div>
+      <button class="d-pad-btn" id="m-left">◀</button>
+      <button class="d-pad-btn" id="m-down">▼</button>
+      <button class="d-pad-btn" id="m-right">▶</button>
+    </div>
+    <div style="display:flex; flex-direction: column; gap: 8px; pointer-events:auto;">
+      <button class="d-pad-btn" id="m-shift" style="width: 54px; font-size: 11px; font-weight:600;">RUN</button>
+      <button class="d-pad-btn" id="m-space" style="width: 54px; font-size: 11px; font-weight:600;">POSE</button>
+      <button class="d-pad-btn" id="m-poop" style="width: 54px; font-size: 11px; font-weight:600; color:#fcd34d;">POOP</button>
+      <button class="d-pad-btn" id="m-sing" style="width: 54px; font-size: 11px; font-weight:600; color:#93c5fd;">SING</button>
+    </div>
+  </div>
+
+  <script src="script.js">
+  </script>
+</body>
+</html>
